@@ -6,7 +6,7 @@ const SalesCard = ({ title, amount, percentage, trend }) => {
     <div className="bg-white p-6 rounded-lg shadow">
       <h3 className="text-gray-500 mb-2">{title}</h3>
       <div className="flex items-center gap-2">
-        <span className="text-2xl font-semibold">${amount}</span>
+        <span className="text-2xl font-semibold">{amount}  Etudiants</span>
         <span className={`flex items-center ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
           {trend === 'up' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
           {percentage}%

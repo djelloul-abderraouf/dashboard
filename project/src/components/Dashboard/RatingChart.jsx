@@ -15,7 +15,7 @@ const RatingChart = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-4xl font-bold">4.7</div>
+        <div className="text-4xl font-bold">Mazaaal </div>
         <Star className="text-yellow-400 fill-yellow-400" size={24} />
       </div>
       
