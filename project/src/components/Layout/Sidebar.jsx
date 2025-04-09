@@ -34,9 +34,9 @@ const Sidebar = () => {
           <Users size={20} />
           <span>CRM</span>
         </Link>
-        <Link to="/analytics" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
+        <Link to="/predictions" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
           <BarChart2 size={20} />
-          <span>Analytics</span>
+          <span>Predictions</span>
         </Link>
         <Link to="/crypto" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
           <Bitcoin size={20} />

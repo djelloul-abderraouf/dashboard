@@ -2,11 +2,20 @@ const express = require('express');
 const fs = require('fs');
 const csv = require('csv-parser');
 const cors = require('cors');
+const multer = require('multer');
+const axios = require('axios'); // Pour envoyer la requête vers Flask
+const path = require('path');
+const FormData = require('form-data');
+//const formidable = require('formidable');
+const upload = multer({ storage: multer.memoryStorage() });
+
 
 const app = express();
 const port = 3001;
 
 app.use(cors()); // Autorise le front (React) à appeler ce serveur
+
+
 
 // 📌 Route API pour lire toutes les données CSV
 app.get('/api/data', (req, res) => {
@@ -368,9 +377,30 @@ app.get('/api/absences-by-class', (req, res) => {
       });
   });
   
+/////////////////////////////////////prediction/////////////////////////////////////////////
 
-
-
+app.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send({ message: 'Aucun fichier téléchargé' });
+  }
+  
+  // Envoi du fichier au service Flask
+  const formData = new FormData();
+  formData.append('file', req.file.buffer, req.file.originalname);
+  
+  axios.post('http://localhost:5001/predict', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+  .then(response => {
+    res.json(response.data);
+  })
+  .catch(error => {
+    console.error('Erreur:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi au backend Flask' });
+  });
+});
 
 
 

@@ -10,3 +10,42 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+.upload-container {
+  max-width: 700px;
+  margin: 50px auto;
+  padding: 40px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
+  background-color: #fff;
+}
+
+.upload-container input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 10px;
+}
+
+.upload-container button {
+  width: 100%;
+  padding: 12px;
+  background-color: #007BFF;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.upload-container button:hover {
+  background-color: #0056b3;
+}
+
+.result-display {
+  background-color: #f9f9f9;
+  padding: 20px;
+  margin-top: 30px;
+  border-radius: 8px;
+  font-family: monospace;
+}

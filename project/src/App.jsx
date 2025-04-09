@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 import StudentsData from './pages/StudentsData'; // adapte le chemin si nécessaire
+import Predictions from './pages/Predictions';
 
 
 function App() {
@@ -24,7 +25,7 @@ function App() {
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/students" element={<StudentsData />} />
-
+                  <Route path="/predictions" element={<Predictions />} />
                 </Routes>
               </main>
             </div>
