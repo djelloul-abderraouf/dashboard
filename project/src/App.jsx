@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
+import StudentsData from './pages/StudentsData'; // adapte le chemin si nécessaire
+
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
               <main className="flex-1 bg-gray-100 min-h-screen">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/students" element={<StudentsData />} />
+
                 </Routes>
               </main>
             </div>

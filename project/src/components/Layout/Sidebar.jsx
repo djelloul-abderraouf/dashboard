@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, Users, BarChart2, Bitcoin, Folder, LogIn, TrendingUp, UserPlus } from 'lucide-react';
+import { Home, ShoppingCart, Users, BarChart2, Bitcoin, Folder, LogIn, TrendingUp, UserPlus , Database} from 'lucide-react';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -25,6 +25,10 @@ const Sidebar = () => {
         <Link to="/ecommerce" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
           <ShoppingCart size={20} />
           <span>E-Commerce</span>
+        </Link>
+        <Link to="/students" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
+          <Database size={20} />
+          <span>Students Data</span>
         </Link>
         <Link to="/crm" className="flex items-center gap-3 p-2 hover:bg-[#333B4E] rounded">
           <Users size={20} />

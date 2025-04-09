@@ -24,6 +24,45 @@ app.get('/api/data', (req, res) => {
     });
 });
 
+// ✅ Route PUT qui modifie directement le fichier CSV
+app.put('/api/data/:studentId', express.json(), (req, res) => {
+  const { studentId } = req.params;
+  const updatedData = req.body;
+
+  const results = [];
+
+  fs.createReadStream('dataset.csv')
+    .pipe(csv())
+    .on('data', (data) => {
+      if (data.StudentID === studentId) {
+        results.push({ ...data, ...updatedData });
+      } else {
+        results.push(data);
+      }
+    })
+    .on('end', () => {
+      const headers = Object.keys(results[0]);
+
+      const csvContent = [
+        headers.join(','),
+        ...results.map(row => headers.map(h => row[h]).join(','))
+      ].join('\n');
+
+      fs.writeFile('dataset.csv', csvContent, 'utf8', (err) => {
+        if (err) {
+          console.error('Erreur lors de l\'écriture du CSV :', err);
+          return res.status(500).json({ error: 'Erreur de sauvegarde des données' });
+        }
+
+        res.json({ message: 'Données mises à jour dans le fichier CSV' });
+      });
+    })
+    .on('error', (err) => {
+      console.error('Erreur lecture CSV :', err);
+      res.status(500).json({ error: 'Erreur lors de la lecture du fichier CSV' });
+    });
+});
+
 // 📌 Route API pour compter les étudiants qui font du sport (sports === '1')
 app.get('/api/sport-count', (req, res) => {
   let count = 0;
