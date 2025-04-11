@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
@@ -8,11 +8,20 @@ const FileUpload = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+  
+  // Added for student search functionality
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredResults, setFilteredResults] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const resultsPerPage = 10; // Show 5 rows at a time
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
     setError(null);
     setResult(null);
+    setFilteredResults([]);
+    setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleUpload = async () => {
@@ -35,6 +44,7 @@ const FileUpload = () => {
       });
      
       setResult(response.data);
+      setFilteredResults(response.data); // Initialize filtered results with all results
     } catch (error) {
       console.error('Erreur lors du téléchargement :', error);
       setError("Une erreur s'est produite lors de l'envoi du fichier.");
@@ -43,11 +53,33 @@ const FileUpload = () => {
     }
   };
 
+  // Effect to filter results when search term changes
+  useEffect(() => {
+    if (!result) return;
+    
+    const term = searchTerm.toLowerCase();
+    
+    if (!term) {
+      setFilteredResults(result);
+      setCurrentPage(1);
+      return;
+    }
+    
+    const filtered = result.filter(item => {
+      return Object.values(item).some(value => 
+        String(value).toLowerCase().includes(term)
+      );
+    });
+    
+    setFilteredResults(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, result]);
+
   const triggerFileInput = () => {
     fileInputRef.current.click();
   };
 
-  // Fonction pour extraire les clés du résultat JSON
+  // Function to extract the keys from the result JSON
   const getResultKeys = () => {
     if (!result || !Array.isArray(result) || result.length === 0) {
       return [];
@@ -55,11 +87,31 @@ const FileUpload = () => {
     return Object.keys(result[0]);
   };
 
+  // Pagination calculations
+  const indexOfLastResult = currentPage * resultsPerPage;
+  const indexOfFirstResult = indexOfLastResult - resultsPerPage;
+  const currentResults = filteredResults.slice(indexOfFirstResult, indexOfLastResult);
+  const totalPages = Math.ceil(filteredResults.length / resultsPerPage);
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">Uploader un fichier CSV</h1>
+          
+          {/* Search functionality */}
+          {result && (
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+            </div>
+          )}
         </div>
 
         <div className="mb-6 bg-gray-50 p-6 rounded-lg border border-gray-200">
@@ -147,30 +199,60 @@ const FileUpload = () => {
               <h3 className="text-lg font-medium text-gray-800 mb-3">Résultats de la prédiction</h3>
               
               {Array.isArray(result) && result.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        {getResultKeys().map((key) => (
-                          <th key={key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {key}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {result.map((item, index) => (
-                        <tr key={index}>
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50">
                           {getResultKeys().map((key) => (
-                            <td key={`${index}-${key}`} className="px-6 py-4 whitespace-nowrap">
-                              {typeof item[key] === 'object' ? JSON.stringify(item[key]) : String(item[key])}
-                            </td>
+                            <th key={key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {key}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {currentResults.map((item, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            {getResultKeys().map((key) => (
+                              <td key={`${index}-${key}`} className="px-6 py-4 whitespace-nowrap">
+                                {typeof item[key] === 'object' ? JSON.stringify(item[key]) : String(item[key])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Pagination controls */}
+                  {filteredResults.length > resultsPerPage && (
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="text-sm text-gray-500">
+                        Affichage de {indexOfFirstResult + 1} à {Math.min(indexOfLastResult, filteredResults.length)} sur {filteredResults.length} entrées
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        <span className="px-4 py-2 rounded-lg bg-gray-100">
+                          {currentPage} sur {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-gray-600">
