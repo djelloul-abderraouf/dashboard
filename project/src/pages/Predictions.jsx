@@ -8,12 +8,12 @@ const FileUpload = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   // Added for student search functionality
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredResults, setFilteredResults] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const resultsPerPage = 10; // Show 5 rows at a time
+  const resultsPerPage = 10; // Show 10 rows at a time
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -85,6 +85,19 @@ const FileUpload = () => {
       return [];
     }
     return Object.keys(result[0]);
+  };
+
+  // Function to determine the color based on GPA
+  const getColor = (gpa) => {
+    if (typeof gpa !== 'number') {
+      // Essayer de convertir en nombre si c'est une chaîne
+      const numGpa = parseFloat(gpa);
+      if (isNaN(numGpa)) {
+        return 'text-gray-500'; // Si ce n'est pas convertible en nombre, utiliser gris
+      }
+      return numGpa < 2 ? 'text-red-500' : 'text-green-500';
+    }
+    return gpa < 2 ? 'text-red-500' : 'text-green-500'; // Rouge pour GPA < 2, vert sinon
   };
 
   // Pagination calculations
@@ -213,10 +226,20 @@ const FileUpload = () => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {currentResults.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
+                          <tr key={index}>
                             {getResultKeys().map((key) => (
                               <td key={`${index}-${key}`} className="px-6 py-4 whitespace-nowrap">
-                                {typeof item[key] === 'object' ? JSON.stringify(item[key]) : String(item[key])}
+                                {key === "GPA" || key === "Predicted GPA" || key === "PredictedGPA" ? (
+                                  <span className={getColor(item[key])}>
+                                    {item[key]}
+                                  </span>
+                                ) : (
+                                  Array.isArray(item[key]) && item[key].length > 0
+                                    ? item[key].join(', ')
+                                    : !Array.isArray(item[key]) 
+                                    ? String(item[key])
+                                    : '' /* Si c'est un tableau vide */
+                                )}
                               </td>
                             ))}
                           </tr>

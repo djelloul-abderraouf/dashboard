@@ -16,6 +16,17 @@ gpa_model = joblib.load('student_performance_model1.pkl')
 # 3. Modèle de classification (pipeline)
 classification_pipeline = joblib.load('student_activity_pipeline.pkl')
 
+def orientation(physique, science, math):
+    if math <= 20 and physique <= 20 and science <= 20:
+        if physique > math and physique > science:
+            return "math technique"
+        elif math > physique and math > science:
+            return "mathéléme"
+        elif science > physique and science > math:
+            return "scientifique"
+        else:
+            return "orientation vers son choix"
+    return "données invalides"
 ### Route pour prédire à partir d'un fichier CSV ###
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -59,15 +70,20 @@ def predict():
         # ['Age', 'Gender', 'StudyTimeWeekly', 'ParentalSupport', 'GPA']
         classification_features = df[['Age', 'Gender', 'StudyTimeWeekly', 'ParentalSupport', 'GPA']]
         classification_predictions = classification_pipeline.predict(classification_features).tolist()
-
         # ---------- Response JSON ----------
         results = []
         for idx in range(len(df)):
+            orientation_result = orientation(
+                df.iloc[idx]['Physics'],
+                df.iloc[idx]['Science'],
+                df.iloc[idx]['Math']
+            )
             student = {
                 'StudentID': df.iloc[idx]['StudentID'],  # Utilise StudentID du fichier csv
                 'PredictedGPA': round(gpa_predictions[idx], 2),
                 'PredictedStudyTime': round(study_predictions[idx], 2),
-                'PredictedActivities': []
+                'PredictedActivities': [],
+                'Orientation': orientation_result,
             }
 
             # Gérer les prédictions classification_predictions
