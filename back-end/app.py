@@ -27,26 +27,21 @@ def orientation(physique, science, math):
         else:
             return "orientation vers son choix"
     return "données invalides"
+
 ### Route pour prédire à partir d'un fichier CSV ###
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'Aucun fichier trouvé dans la requête'}), 400
-# Lire le fichier CSV envoyé depuis Node.js
+
+    # Lire le fichier CSV envoyé depuis Node.js
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'Aucun fichier sélectionné'}), 400
-        
-        
-
+        return jsonify({'error': 'Aucun fichier sélectionné'}), 400      
     try:
-        # Lire le fichier CSV envoyé depuis Node.js
-        
+
         df = pd.read_csv(file)
 
-        # ---------- GPA Prediction ----------
-        # Colonnes nécessaires :
-        # ['StudyTimeWeekly', 'Absences', 'Gender', 'Tutoring', 'Sports', 'Music', 'Volunteering', 'Extracurricular', 'ParentalSupport']
         gpa_features = df[['StudyTimeWeekly', 'Absences', 'Gender', 'Tutoring', 'Sports', 'Music', 'Volunteering', 'Extracurricular', 'ParentalSupport']]
         gpa_predictions = gpa_model.predict(gpa_features)
 
@@ -70,29 +65,32 @@ def predict():
         # ['Age', 'Gender', 'StudyTimeWeekly', 'ParentalSupport', 'GPA']
         classification_features = df[['Age', 'Gender', 'StudyTimeWeekly', 'ParentalSupport', 'GPA']]
         classification_predictions = classification_pipeline.predict(classification_features).tolist()
+        
         # ---------- Response JSON ----------
-        results = []
+        results = []  # Initialisation de la liste des résultats
         for idx in range(len(df)):
             orientation_result = orientation(
                 df.iloc[idx]['Physics'],
                 df.iloc[idx]['Science'],
                 df.iloc[idx]['Math']
             )
+            activity_labels = ['Sports', 'Music', 'Volunteering', 'Extracurricular'] 
+            predicted_activities = classification_predictions[idx]
+
+            # Construction de la liste des activités
+            activities = [activity_labels[i] for i, val in enumerate(predicted_activities) if val == 1]
+            if not activities:
+                activities = ['Aucune']
+                
             student = {
                 'StudentID': df.iloc[idx]['StudentID'],  # Utilise StudentID du fichier csv
                 'PredictedGPA': round(gpa_predictions[idx], 2),
                 'PredictedStudyTime': round(study_predictions[idx], 2),
-                'PredictedActivities': [],
+                'PredictedActivities': activities,
                 'Orientation': orientation_result,
             }
-
-            # Gérer les prédictions classification_predictions
-            activity_labels = ['Sports', 'Music', 'Volunteering', 'Extracurricular'] 
-            predicted_activities = classification_predictions[idx]
-            for i, val in enumerate(predicted_activities):
-                if val == 1:
-                    student['PredictedActivities'].append(activity_labels[i])
-
+            
+            # Ajouter l'étudiant à la liste des résultats
             results.append(student)
 
         return jsonify(results)
