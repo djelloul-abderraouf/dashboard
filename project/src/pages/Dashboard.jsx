@@ -1,192 +1,194 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  PieChart,
+  Pie,
+  LineChart,
+  ScatterChart,
+  Cell,
+  Scatter,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import Navbar from '../components/Layout/NavBar';
 import SalesCard from '../components/Dashboard/SalesCard';
 import StatsCard from '../components/Dashboard/StatsCard';
-import WorldMap from '../components/Dashboard/WorldMap';
-import SocialStats from '../components/Dashboard/SocialStats';
-import RatingChart from '../components/Dashboard/RatingChart';
-import RecentUsers from '../components/Dashboard/RecentUsers';
-import { PieChart, Pie, LineChart, ScatterChart,Cell, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import Navbar from '../components/Layout/NavBar';
-
-import { useEffect, useState } from 'react';
-
 
 const renderCustomizedLabel = ({ percent }) => {
   return `${(percent * 100).toFixed(1)}%`;
 };
 
-
-
-
-const data = [
-  { name: 'Jan', value: 4000 },
-  { name: 'Feb', value: 3000 },
-  { name: 'Mar', value: 2000 },
-  { name: 'Apr', value: 2780 },
-  { name: 'May', value: 1890 },
-  { name: 'Jun', value: 2390 },
-];
-
-
-
 const Dashboard = () => {
+  // State to store all dashboard data
+  const [data, setData] = useState({
+    sportCount: 0,
+    musicCount: 0,
+    volunteeringCount: 0,
+    genderStats: { male: 0, female: 0 },
+    studyData: [],
+    activityData: [],
+    absenceData: [],
+    studyTimeData: [],
+    averageAgeData: [],
+    gpaByClassData: [],
+  });
 
+  // State to track loading and errors
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  //le nombre d'etudiant qui font du sport
-  const [sportCount, setSportCount] = useState(0);
+  // Function to fetch data from the backend
+  const fetchData = async () => {
+    try {
+      if (loading) {
+        // Initial load
+        setLoading(true);
+      } else {
+        // Subsequent refreshes
+        setRefreshing(true);
+      }
+      setError('');
+
+      // Fetch all data in parallel
+      const [
+        sportCountRes,
+        musicCountRes,
+        volunteeringCountRes,
+        genderStatsRes,
+        studyDataRes,
+        activityDataRes,
+        absenceDataRes,
+        studyTimeDataRes,
+        averageAgeDataRes,
+        gpaByClassDataRes,
+      ] = await Promise.all([
+        fetch('http://localhost:3001/api/sport-count').then((res) => res.json()),
+        fetch('http://localhost:3001/api/music-count').then((res) => res.json()),
+        fetch('http://localhost:3001/api/volunteering-count').then((res) => res.json()),
+        fetch('http://localhost:3001/api/gender-distribution').then((res) => res.json()),
+        fetch('http://localhost:3001/api/study-vs-gpa').then((res) => res.json()),
+        fetch('http://localhost:3001/api/activities-distribution').then((res) => res.json()),
+        fetch('http://localhost:3001/api/absences-by-class').then((res) => res.json()),
+        fetch('http://localhost:3001/api/studytime-by-class').then((res) => res.json()),
+        fetch('http://localhost:3001/api/average-age-by-class').then((res) => res.json()),
+        fetch('http://localhost:3001/api/average-gpa-by-class').then((res) => res.json()),
+      ]);
+
+      // Update state with fetched data
+      setData({
+        sportCount: sportCountRes.sportCount,
+        musicCount: musicCountRes.musicCount,
+        volunteeringCount: volunteeringCountRes.volunteeringCount,
+        genderStats: genderStatsRes,
+        studyData: studyDataRes,
+        activityData: activityDataRes,
+        absenceData: absenceDataRes,
+        studyTimeData: studyTimeDataRes,
+        averageAgeData: averageAgeDataRes,
+        gpaByClassData: gpaByClassDataRes,
+      });
+      
+      console.log('Dashboard data refreshed successfully');
+    } catch (err) {
+      setError('Failed to load dashboard data');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch data on component mount
   useEffect(() => {
-    fetch('http://localhost:3001/api/sport-count')
-      .then(res => res.json())
-      .then(data => {
-        setSportCount(data.sportCount);
-      })
-      .catch(err => console.error('Erreur lors de la récupération des données sportives :', err));
+    fetchData();
   }, []);
 
-
-  //le nombre d'etudiants qui font de la musique
-
-  const [musicCount, setMusicCount] = useState(0);
+  // Listen for dataset changes via custom event from NavBar
   useEffect(() => {
-    fetch('http://localhost:3001/api/music-count')
-      .then(res => res.json())
-      .then(data => {
-        setMusicCount(data.musicCount);
-      })
-      .catch(err => console.error('Erreur API music-count :', err));
+    const handleDatasetChanged = () => {
+      console.log('Dataset changed event received, refreshing data...');
+      fetchData();
+    };
+    
+    window.addEventListener('datasetChanged', handleDatasetChanged);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('datasetChanged', handleDatasetChanged);
+    };
   }, []);
 
-  //le nombre detudiants qui font du benevolat
-  const [volunteeringCount, setVolunteeringCount] = useState(0);
+  // Poll for dataset changes as a backup
   useEffect(() => {
-    fetch('http://localhost:3001/api/volunteering-count')
-      .then(res => res.json())
-      .then(data => {
-        setVolunteeringCount(data.volunteeringCount);
-      })
-      .catch(err => console.error('Erreur API volunteering-count :', err));
+    let previousDataset = null;
+    
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/dataset-status');
+        const data = await response.json();
+        const activeDataset = data.activeDataset;
+        
+        // Only re-fetch if the dataset changed
+        if (previousDataset !== null && previousDataset !== activeDataset) {
+          console.log('Dataset changed detected via polling, refreshing data...');
+          fetchData();
+        }
+        
+        previousDataset = activeDataset;
+      } catch (err) {
+        console.error('Error checking dataset status:', err);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
-  //graphe gpa et gradclass
-  const [gpaByClass, setGpaByClass] = useState([]);
-  useEffect(() => {
-    fetch('http://localhost:3001/api/average-gpa-by-class')
-      .then(res => res.json())
-      .then(data => {
-        setGpaByClass(data);
-      })
-      .catch(err => console.error('Erreur GPA/GradeClass :', err));
-  }, []);
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-
-  // le nombre de fille et de garcon
-  const [genderStats, setGenderStats] = useState({ male: 0, female: 0 });
-  useEffect(() => {
-    fetch('http://localhost:3001/api/gender-distribution')
-      .then(res => res.json())
-      .then(data => {
-        setGenderStats(data);
-      })
-      .catch(err => console.error('Erreur API gender-distribution:', err));
-  }, []);
-
-
-  //nuage de point temps d'etude et gpa
-  const [studyData, setStudyData] = useState([]);
-  useEffect(() => {
-    fetch('http://localhost:3001/api/study-vs-gpa')
-      .then(res => res.json())
-      .then(data => setStudyData(data))
-      .catch(err => console.error('Erreur API study-vs-gpa:', err));
-  }, []);
-
-
-  //piechart des activities
-  const [activityData, setActivityData] = useState([]);
-  useEffect(() => {
-    fetch('http://localhost:3001/api/activities-distribution')
-      .then(res => res.json())
-      .then(data => setActivityData(data))
-      .catch(err => console.error('Erreur API activités :', err));
-  }, []);
-// piechart taux d'absence par classe
-const [absenceData, setAbsenceData] = useState([]);
-useEffect(() => {
-  fetch('http://localhost:3001/api/absences-by-class')
-    .then(res => res.json())
-    .then(data => setAbsenceData(data))
-    .catch(err => console.error('Erreur API absences :', err));
-}, []);
-
-//piechart taux de temps d'etude par classe
-const [studyTimeData, setStudyTimeData] = useState([]);
-useEffect(() => {
-  fetch('http://localhost:3001/api/studytime-by-class')
-    .then(res => res.json())
-    .then(data => setStudyTimeData(data))
-    .catch(err => console.error('Erreur API studytime:', err));
-}, []);
-
-//piechart moyenne d'age par classe
-const [averageAgeData, setAverageAgeData] = useState([]);
-useEffect(() => {
-  fetch('http://localhost:3001/api/average-age-by-class')
-    .then(res => res.json())
-    .then(data => setAverageAgeData(data))
-    .catch(err => console.error('Erreur API moyenne d\'âge:', err));
-}, []);
-
-//piechart moyenne gpa par classe
-const [gpaByClassData, setGpaByClassData] = useState([]);
-useEffect(() => {
-  fetch('http://localhost:3001/api/average-gpa-by-class')
-    .then(res => res.json())
-    .then(data => setGpaByClassData(data))
-    .catch(err => console.error("Erreur API GPA :", err));
-}, []);
-
-
-
-
-
-
-
-
+  if (error) {
+    return <div>{error}</div>;
+  }
 
   return (
     <div>
       <Navbar />
+      {refreshing && (
+        <div className="fixed top-4 right-4 bg-cyan-100 text-cyan-800 px-4 py-2 rounded-lg shadow z-50">
+          Refreshing data...
+        </div>
+      )}
       <div className="p-6">
         <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <SalesCard
             title="Étudiants sportifs"
-            amount={sportCount.toString()}
+            amount={data.sportCount.toString()}
             percentage={20}
             trend="up"
           />
-
           <SalesCard
             title="Étudiants musiciens"
-            amount={musicCount.toString()}
+            amount={data.musicCount.toString()}
             percentage={45}
             trend="up"
           />
-
           <SalesCard
             title="Étudiants bénévoles"
-            amount={volunteeringCount.toString()}
+            amount={data.volunteeringCount.toString()}
             percentage={52}
             trend="up"
           />
-
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="md:col-span-2">
             <div className="bg-white p-6 rounded-lg shadow-md h-full">
-              <h2 className="text-xl font-semibold mb-4">Corrélation : Temps d’étude vs GPA</h2>
+              <h2 className="text-xl font-semibold mb-4">Corrélation : Temps d'étude vs GPA</h2>
               <div className="h-[470px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart>
@@ -195,7 +197,7 @@ useEffect(() => {
                       type="number"
                       dataKey="studyTime"
                       name="Temps d'étude (h/semaine)"
-                      label={{ value: 'Temps d’étude', position: 'insideBottom', offset: -5 }}
+                      label={{ value: 'Temps détude', position: 'insideBottom', offset: -5 }}
                     />
                     <YAxis
                       type="number"
@@ -204,193 +206,154 @@ useEffect(() => {
                       label={{ value: 'GPA', angle: -90, position: 'insideLeft' }}
                     />
                     <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                    <Scatter name="Étudiants" data={studyData} fill="#06b6d4" />
+                    <Scatter name="Étudiants" data={data.studyData} fill="#06b6d4" />
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
-
           <div className="space-y-2">
-
-
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">Répartition des activités</h2>
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={activityData}
+                      data={data.activityData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
                       fill="#06b6d4"
-                      label={renderCustomizedLabel} // 🎯 ici
+                      label={renderCustomizedLabel}
                     />
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-
-
             </div>
-
-
-
             <StatsCard
               title="Garçons"
-              value={genderStats.male.toString()}
+              value={data.genderStats.male.toString()}
               description="Étudiants de genre masculin"
             />
             <StatsCard
               title="Filles"
-              value={genderStats.female.toString()}
+              value={data.genderStats.female.toString()}
               description="Étudiantes de genre féminin"
             />
-
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-md h-full">
-  <h2 className="text-md font-semibold mb-4 text-center">Absences par classe</h2>
-  <div className="h-[200px]"> {/* 🟢 Hauteur augmentée */}
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={Array.isArray(absenceData) ? absenceData : []}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={80} // 🟢 Plus grand rayon
-          fill="#06b6d4"
-          
-        >
-          {absenceData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={
-                ['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][
-                  index % 5
-                ]
-              }
-            />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
-
-
-<div className="bg-white p-6 rounded-lg shadow-md h-full">
-  <h2 className="text-md font-semibold mb-4 text-center">Heures d’étude par classe</h2>
-  <div className="h-[200px]">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={Array.isArray(studyTimeData) ? studyTimeData : []}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          fill="#06b6d4"
-          
-        >
-          {studyTimeData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={
-                ['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][
-                  index % 5
-                ]
-              }
-            />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
-          
-          
-<div className="bg-white p-6 rounded-lg shadow-md h-full">
-  <h2 className="text-md font-semibold mb-4 text-center">Âge moyen par classe</h2>
-  <div className="h-[200px]">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={averageAgeData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          fill="#06b6d4"
-          
-        >
-          {averageAgeData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={
-                ['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][
-                  index % 5
-                ]
-              }
-            />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
-<div className="bg-white p-6 rounded-lg shadow-md h-full">
-  <h2 className="text-md font-semibold mb-4 text-center">GPA moyen par classe</h2>
-  <div className="h-[200px]">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={gpaByClassData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={80}
-          fill="#06b6d4"
-          
-        >
-          {gpaByClassData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={
-                ['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][
-                  index % 5
-                ]
-              }
-            />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <RatingChart />
-          <RecentUsers />
+          {/* Absences par classe */}
+          <div className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-md font-semibold mb-4 text-center">Absences par classe</h2>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.absenceData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#06b6d4"
+                  >
+                    {data.absenceData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          {/* Heures d'étude par classe */}
+          <div className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-md font-semibold mb-4 text-center">Heures d'étude par classe</h2>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.studyTimeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#06b6d4"
+                  >
+                    {data.studyTimeData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          {/* Âge moyen par classe */}
+          <div className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-md font-semibold mb-4 text-center">Âge moyen par classe</h2>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.averageAgeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#06b6d4"
+                  >
+                    {data.averageAgeData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          {/* GPA moyen par classe */}
+          <div className="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 className="text-md font-semibold mb-4 text-center">GPA moyen par classe</h2>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.gpaByClassData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#06b6d4"
+                  >
+                    {data.gpaByClassData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={['#99f6e4', '#2dd4bf', '#06b6d4', '#0e7490', '#164e63'][index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
     </div>
