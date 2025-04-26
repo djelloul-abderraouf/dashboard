@@ -16,6 +16,8 @@ import {
 import Navbar from '../components/Layout/NavBar';
 import SalesCard from '../components/Dashboard/SalesCard';
 import StatsCard from '../components/Dashboard/StatsCard';
+import RatingChart from '../components/Dashboard/RatingChart';
+import RecentUsers from '../components/Dashboard/RecentUsers';
 
 const renderCustomizedLabel = ({ percent }) => {
   return `${(percent * 100).toFixed(1)}%`;
@@ -352,8 +354,13 @@ const Dashboard = () => {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+              
             </div>
           </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <RatingChart />
+          <RecentUsers />
         </div>
       </div>
     </div>

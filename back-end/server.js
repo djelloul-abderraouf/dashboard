@@ -492,7 +492,37 @@ app.get('/api/top-students/:classId', (req, res) => {
       res.status(500).json({ error: 'Erreur lecture CSV' });
     });
 });
-
+  //classement des etudiants par gpa et leurs claases
+app.get('/api/top-students/:classId', (req, res) => {
+    const classId = parseInt(getActiveDatasetPath()) - 1; // car dans CSV les classes sont 0-indexées
+    const students = [];
+  
+    fs.createReadStream('dataset.csv')
+      .pipe(csv())
+      .on('data', (row) => {
+        const grade = parseInt(row['GradeClass']);
+        const gpa = parseFloat(row['GPA']);
+  
+        if (!isNaN(grade) && grade === classId && !isNaN(gpa)) {
+          students.push({
+            name: row['StudentID'] || 'ID inconnu',
+            gpa: gpa,
+            age: row['Age'],
+          });
+        }
+      })
+      .on('end', () => {
+        const topStudents = students
+          .sort((a, b) => b.gpa - a.gpa)
+          .slice(0, 5);
+  
+        res.json(topStudents);
+      })
+      .on('error', (err) => {
+        console.error('Erreur lecture top étudiants:', err);
+        res.status(500).json({ error: 'Erreur lecture CSV' });
+      });
+  });
 // Get dataset status (which one is active) - removed duplicate route
 
 // Route to force refresh data (useful after file upload)
